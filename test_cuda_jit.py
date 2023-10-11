@@ -1,13 +1,12 @@
-from numba import jit, cuda
+from numba import jit, cuda, prange
 import numpy as np
-# to measure exec time
 from timeit import default_timer as timer
 
 
-@jit
+@jit(parallel=True)
 def func(a, n, nr):
 
-    for i in range(n):
+    for i in prange(n):
         for j in range(nr):
             a[i] += 1
 
