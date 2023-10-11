@@ -1,0 +1,28 @@
+
+
+extern "C"
+__global__ void annealKernel(float* currentSolutions, float* nextSolutions, float temperature, int count)
+{
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+
+    if (idx < count)
+    {
+        float currentSolution = currentSolutions[idx];
+        float currentEnergy = currentSolution * currentSolution; // Energy is x^2
+
+        // Generate a neighboring solution (you can change the way neighbors are generated)
+        float nextSolution = currentSolution + (2.0f * ((float)rand() / RAND_MAX) - 1.0f);
+        float nextEnergy = nextSolution * nextSolution;
+
+        float energyDiff = nextEnergy - currentEnergy;
+
+        if (energyDiff < 0 || exp(-energyDiff / temperature) >((float)rand() / RAND_MAX))
+        {
+            nextSolutions[idx] = nextSolution;
+        }
+        else
+        {
+            nextSolutions[idx] = currentSolution;
+        }
+    }
+}
