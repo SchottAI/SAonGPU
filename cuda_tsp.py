@@ -6,7 +6,8 @@ from timeit import default_timer as timer
 from numba.cuda.random import create_xoroshiro128p_states, xoroshiro128p_uniform_float32
 
 # Define cities and their coordinates
-c_array = np.array([(0, 0), (1, 2), (3, 1), (2, 4), (1, 1)], dtype=np.float32)
+num_cities = 100
+c_array = np.array([(np.random.randint(0, 100), np.random.randint(0, 100)) for _ in range(num_cities)], dtype=np.float32)
 cities = cuda.to_device(c_array)
 
 
@@ -73,19 +74,19 @@ def simulated_annealing_kernel(rng_states, cities, current_solution, new_solutio
         current_temperature *= .99
 
 
-n = 1000
+n = 1000000
 
 # Define initial solution (random permutation)
-best_solution = cuda.to_device([np.random.permutation(list(range(len(c_array)))) for _ in range(n)])
-current_solution = cuda.to_device([np.zeros(len(c_array), dtype=np.int32) for _ in range(n)])
-new_solution = cuda.to_device([np.zeros(len(c_array), dtype=np.int32) for _ in range(n)])
+best_solution = cuda.to_device([np.random.permutation(list(range(num_cities))) for _ in range(n)])
+current_solution = cuda.to_device([np.zeros(num_cities, dtype=np.int32) for _ in range(n)])
+new_solution = cuda.to_device([np.zeros(num_cities, dtype=np.int32) for _ in range(n)])
 best_cost = cuda.to_device([np.inf for _ in range(n)])  # Initialize with a high cost
 
 rng_states = create_xoroshiro128p_states(n, seed=1)
 
 # Run simulated annealing kernel
 start = timer()
-simulated_annealing_kernel[1, n](rng_states, cities, current_solution, new_solution, best_solution, best_cost, 1000)
+simulated_annealing_kernel[n // 1000, 1000](rng_states, cities, current_solution, new_solution, best_solution, best_cost, 1000)
 
 # Transfer the best_solution back to the CPU
 optimized_route = best_solution.copy_to_host()

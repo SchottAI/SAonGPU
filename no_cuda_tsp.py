@@ -3,11 +3,14 @@ import numpy as np
 from timeit import default_timer as timer
 
 # Define cities and their coordinates
-cities = np.array([(0, 0), (1, 2), (3, 1), (2, 4), (1, 1)], dtype=np.float32)
+num_cities = 100
+cities = np.array([(np.random.randint(0, 100), np.random.randint(0, 100)) for _ in range(num_cities)], dtype=np.float32)
+
 
 # Define distance function
 def calculate_distance(city1, city2):
     return math.sqrt((cities[city1][0] - cities[city2][0])**2 + (cities[city1][1] - cities[city2][1])**2)
+
 
 # Define cost function
 def calculate_total_distance(solution):
@@ -17,12 +20,14 @@ def calculate_total_distance(solution):
     # Close the loop by returning to the starting city
     return total_distance + calculate_distance(solution[-1], solution[0])
 
+
 def generate_neighbor(solution):
     new_solution = solution.copy()
     indices = np.random.randint(0, len(solution), 2)
     new_solution[indices[0]] = solution[indices[1]]
     new_solution[indices[1]] = solution[indices[0]]
     return new_solution
+
 
 # Main optimization loop (CUDA kernel)
 def simulated_annealing_kernel(best_solution, best_cost, iter, tx):
@@ -51,10 +56,10 @@ def simulated_annealing_kernel(best_solution, best_cost, iter, tx):
         current_temperature *= .99
 
 
-n = 1000
+n = 1000000
 
 # Define initial solution (random permutation)
-best_solution = [np.random.permutation(list(range(len(cities)))) for _ in range(n)]
+best_solution = [np.random.permutation(list(range(num_cities))) for _ in range(n)]
 best_cost = [np.inf for _ in range(n)]  # Initialize with a high cost
 
 start = timer()
@@ -64,5 +69,5 @@ for i in range(1000):
 
 argmin = np.argmin(best_cost)
 
-print("without GPU:", timer() - start)
+print("without GPU, pure Python:", timer() - start)
 print("Best tour:", best_solution[argmin], best_cost[argmin])
