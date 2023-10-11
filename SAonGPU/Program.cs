@@ -3,6 +3,7 @@ using SharpDX.D3DCompiler;
 using SharpDX.Direct3D;
 using SharpDX.Direct3D11;
 using SharpDX.DXGI;
+using System.Diagnostics;
 
 var device = new SharpDX.Direct3D11.Device(DriverType.Hardware, DeviceCreationFlags.None);
 var context = device.ImmediateContext;
@@ -11,14 +12,14 @@ var computeShaderByteCode = ShaderBytecode.CompileFromFile("annealKernel.hlsl", 
 var computeShader = new ComputeShader(device, computeShaderByteCode);
 context.ComputeShader.Set(computeShader);
 
-int width = 256;
-int height = 256;
+int width = 16;
+int height = 16;
 int[] initialLattice = new int[width * height];
 Random rand = new Random();
 
 for (int i = 0; i < width * height; i++)
 {
-    initialLattice[i] = rand.Next(2) * 2 - 1; // will generate either -1 or 1
+    initialLattice[i] = -1;// rand.Next(2) * 2 - 1; // will generate either -1 or 1
 }
 
 var stagingTexture = new Texture2D(device, new Texture2DDescription
@@ -80,7 +81,11 @@ var magnetizationBuffer = new SharpDX.Direct3D11.Buffer(device, new BufferDescri
 var magnetizationUAV = new UnorderedAccessView(device, magnetizationBuffer);
 context.ComputeShader.SetUnorderedAccessView(1, magnetizationUAV);
 
+var sw = new Stopwatch();
+sw.Restart();
+
 context.Dispatch(16, 16, 1);
+
 
 var magnetizationStaging = new SharpDX.Direct3D11.Buffer(device, new BufferDescription
 {
@@ -95,6 +100,11 @@ var magnetizationStaging = new SharpDX.Direct3D11.Buffer(device, new BufferDescr
 context.CopyResource(magnetizationBuffer, magnetizationStaging);
 
 var mappedResource2 = context.MapSubresource(magnetizationStaging, 0, MapMode.Read, SharpDX.Direct3D11.MapFlags.None);
+
+
+sw.Stop();
+Console.WriteLine(sw.ElapsedMilliseconds);
+
 int magnetization;
 unsafe
 {
@@ -103,6 +113,39 @@ unsafe
 context.UnmapSubresource(magnetizationStaging, 0);
 
 Console.WriteLine($"Magnetization: {magnetization}");
+
+sw.Restart();
+for (int i = 0; i < initialLattice.Length; i++)
+{
+    for (int j = 0;j < 100000; j++)
+    {
+        initialLattice[i]++;
+    }
+}
+
+sw.Stop();
+Console.WriteLine(sw.ElapsedMilliseconds);
+Console.WriteLine(initialLattice.Sum());
+for (int i = 0; i < width * height; i++)
+{
+    initialLattice[i] = -1;// rand.Next(2) * 2 - 1; // will generate either -1 or 1
+}
+sw.Restart();
+
+Parallel.For( 0, initialLattice.Length, i =>
+{
+    {
+        for (int j = 0; j < 100000; j++)
+        {
+            initialLattice[i]++;
+        }
+    }
+});
+
+sw.Stop();
+Console.WriteLine(sw.ElapsedMilliseconds);
+Console.WriteLine(initialLattice.Sum());
+
 
 // Cleanup
 uav.Dispose();
